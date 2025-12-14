@@ -119,7 +119,7 @@ const App: React.FC = () => {
            <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileUpload} />
            <div className="flex items-center gap-3 px-6 py-3 bg-white/5 backdrop-blur-xl border border-white/20 rounded-full hover:bg-white/20 hover:border-amber-400/50 transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_20px_rgba(255,200,100,0.3)]">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-200 group-hover:text-amber-100 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="text-amber-100/80 font-mono text-xs tracking-widest group-hover:text-white transition-colors">UPLOAD MEMORIES</span>
            </div>
@@ -166,7 +166,7 @@ const App: React.FC = () => {
         <Suspense fallback={null}>
           <LuxuryTree />
           
-          <EffectComposer disableNormalPass>
+          <EffectComposer enableNormalPass={false}>
             <Bloom luminanceThreshold={0.8} mipmapBlur intensity={1.5} radius={0.5} />
             <Vignette eskil={false} offset={0.1} darkness={0.8} />
             <Noise opacity={0.02} />

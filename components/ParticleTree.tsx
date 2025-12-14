@@ -105,7 +105,7 @@ const ParticleText = ({ text, position, size = 1.2, density = 2500, progressRef 
   const { geometry, uniforms } = useMemo(() => {
     if (!font) return { geometry: null, uniforms: null };
 
-    const textGeo = new TextGeometry(text, {
+    const textConfig: any = {
       font: font,
       size: size,
       height: 0.2, 
@@ -115,7 +115,9 @@ const ParticleText = ({ text, position, size = 1.2, density = 2500, progressRef 
       bevelSize: 0.01,
       bevelOffset: 0,
       bevelSegments: 3,
-    });
+    };
+
+    const textGeo = new TextGeometry(text, textConfig);
     
     textGeo.center(); 
     
