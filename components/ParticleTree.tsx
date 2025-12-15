@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { useFrame, useLoader, extend } from '@react-three/fiber';
+import { useFrame, useLoader, extend, useThree } from '@react-three/fiber';
 import { Instances, Instance } from '@react-three/drei';
 import * as THREE from 'three';
 import { TextGeometry, FontLoader, MeshSurfaceSampler } from 'three-stdlib';
@@ -616,6 +616,10 @@ const LuxuryTree: React.FC = () => {
   const rotatingGroupRef = useRef<THREE.Group>(null);
   const { isHandOpen } = useTreeStore();
   const progressRef = useRef(0);
+  const { viewport } = useThree(); // Access viewport for responsive logic
+
+  // Responsive Check: Mobile is roughly when width < height (Portrait)
+  const isMobile = viewport.width < viewport.height;
   
   // Geometries
   const ballGeo = useMemo(() => new THREE.SphereGeometry(1, 16, 16), []);
@@ -675,8 +679,21 @@ const LuxuryTree: React.FC = () => {
         <DynamicGifts progressRef={progressRef} />
       </group>
       
-      <ParticleText text="MERRY" position={[-6.5, 0, 0]} size={1.2} density={4000} progressRef={progressRef} />
-      <ParticleText text="CHRISTMAS" position={[8.5, 0, 0]} size={1.2} density={5000} progressRef={progressRef} />
+      {/* Responsive Text Layout with FURTHER REDUCED DENSITY (50% of previous) */}
+      <ParticleText 
+        text="MERRY" 
+        position={isMobile ? [0, 5.8, 0] : [-6.5, 0, 0]} 
+        size={isMobile ? 0.6 : 1.2} 
+        density={isMobile ? 2000 : 4000} // Reduced significantly
+        progressRef={progressRef} 
+      />
+      <ParticleText 
+        text="CHRISTMAS" 
+        position={isMobile ? [0, 4.8, 0] : [8.5, 0, 0]} 
+        size={isMobile ? 0.6 : 1.2} 
+        density={isMobile ? 2400 : 4800} // Reduced significantly
+        progressRef={progressRef} 
+      />
 
     </group>
   );

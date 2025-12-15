@@ -13,9 +13,9 @@ const GestureController = () => {
   const { handX, handY, handZ, isTracking } = useTreeStore();
   
   // Smooth damped values
-  // Initial position matches the screenshot: Centered [0], slightly up [2], distance [14]
-  const currentPos = useRef(new THREE.Vector3(0, 2, 14));
-  const targetPos = useRef(new THREE.Vector3(0, 2, 14));
+  // Adjusted Default: Z=18, Y=1.5
+  const currentPos = useRef(new THREE.Vector3(0, 1.5, 18));
+  const targetPos = useRef(new THREE.Vector3(0, 1.5, 18));
 
   useFrame((state, delta) => {
     // Enable gesture control whenever a hand is tracked (Open or Closed)
@@ -30,7 +30,8 @@ const GestureController = () => {
       
       // 3. Distance (Zoom/Push/Pull)
       const zInput = THREE.MathUtils.clamp(handZ, 0.05, 0.35);
-      const distance = THREE.MathUtils.mapLinear(zInput, 0.05, 0.35, 22, 6);
+      // Range: 10 (Close) to 35 (Far)
+      const distance = THREE.MathUtils.mapLinear(zInput, 0.05, 0.35, 35, 10);
 
       // Convert Spherical to Cartesian
       targetPos.current.set(
@@ -43,7 +44,8 @@ const GestureController = () => {
       currentPos.current.lerp(targetPos.current, delta * 3); // Fast response
       
       camera.position.copy(currentPos.current);
-      camera.lookAt(0, 3, 0); // Look at tree center
+      // Look slightly higher (Y=1.5) to center the Tree + Text composition
+      camera.lookAt(0, 1.5, 0); 
     } else {
        // When not tracking, we leave the camera where it is.
        // Sync ref to current camera pos so it doesn't jump when hand returns
@@ -135,7 +137,7 @@ const App: React.FC = () => {
         gl={{ antialias: false, toneMappingExposure: 1.2 }} 
         shadows
       >
-        <PerspectiveCamera makeDefault position={[0, 2, 14]} fov={50} />
+        <PerspectiveCamera makeDefault position={[0, 1.5, 18]} fov={50} />
         
         {/* Gesture Controller */}
         <GestureController />
