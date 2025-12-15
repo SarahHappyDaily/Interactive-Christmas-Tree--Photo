@@ -1,4 +1,4 @@
-import React, { Suspense, useRef } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
 import { OrbitControls, Environment, PerspectiveCamera, Stars, Sparkles } from '@react-three/drei';
@@ -58,57 +58,89 @@ const GestureController = () => {
 
 const App: React.FC = () => {
   const { addUserPhotos, isTracking } = useTreeStore();
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Helper function to compress images
+  // Optimized helper to compress images using ObjectURL (Much faster on iOS than FileReader)
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.src = e.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_SIZE = 512; 
-          let width = img.width;
-          let height = img.height;
+      // Create a temporary URL pointing to the file blob
+      // This avoids reading the entire file into a base64 string before processing
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      
+      img.onload = () => {
+        // Clean up memory immediately
+        URL.revokeObjectURL(objectUrl);
 
-          if (width > height) {
-             width = height; 
-          } else {
-             height = width;
-          }
-          canvas.width = MAX_SIZE;
-          canvas.height = MAX_SIZE;
-          const ctx = canvas.getContext('2d');
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 512; 
+        let width = img.width;
+        let height = img.height;
+
+        // Maintain aspect ratio
+        if (width > height) {
+           if (width > MAX_SIZE) {
+             height *= MAX_SIZE / width;
+             width = MAX_SIZE;
+           }
+        } else {
+           if (height > MAX_SIZE) {
+             width *= MAX_SIZE / height;
+             height = MAX_SIZE;
+           }
+        }
+        
+        canvas.width = MAX_SIZE;
+        canvas.height = MAX_SIZE;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          // Center crop logic
+          const sSize = Math.min(img.width, img.height);
+          const sx = (img.width - sSize) / 2;
+          const sy = (img.height - sSize) / 2;
+          ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, MAX_SIZE, MAX_SIZE);
           
-          if (ctx) {
-            const sSize = Math.min(img.width, img.height);
-            const sx = (img.width - sSize) / 2;
-            const sy = (img.height - sSize) / 2;
-            ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, MAX_SIZE, MAX_SIZE);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
-          } else {
-            resolve(img.src); 
-          }
-        };
+          // Use 0.6 quality for faster compression on mobile
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        } else {
+          resolve(objectUrl); // Fallback (shouldn't happen)
+        }
       };
-      reader.readAsDataURL(file);
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(""); // Return empty on error to filter out later
+      };
+
+      img.src = objectUrl;
     });
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      const fileList = Array.from(files) as File[];
+      setIsProcessing(true);
       
-      try {
-        const compressedPhotos = await Promise.all(
-          fileList.map((file) => compressImage(file))
-        );
-        addUserPhotos(compressedPhotos);
-      } catch (err) {
-        console.error("Error processing photos:", err);
-      }
+      // Use setTimeout to allow the UI to re-render and show the "Processing" state
+      // before the main thread gets busy with image compression.
+      setTimeout(async () => {
+        try {
+          const fileList = Array.from(files) as File[];
+          const compressedPhotos = await Promise.all(
+            fileList.map((file) => compressImage(file))
+          );
+          // Filter out failed loads
+          const validPhotos = compressedPhotos.filter(p => p.length > 0);
+          addUserPhotos(validPhotos);
+        } catch (err) {
+          console.error("Error processing photos:", err);
+        } finally {
+          setIsProcessing(false);
+          // Reset input value so same files can be selected again if needed
+          event.target.value = '';
+        }
+      }, 100);
     }
   };
 
@@ -117,13 +149,38 @@ const App: React.FC = () => {
       
       {/* Upload Button Area - Increased bottom padding for mobile safe area (bottom-12) */}
       <div className="absolute bottom-12 right-8 z-50 flex flex-col items-end gap-2">
-         <label className="cursor-pointer group">
-           <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileUpload} />
-           <div className="flex items-center gap-3 px-6 py-3 bg-white/5 backdrop-blur-xl border border-white/20 rounded-full hover:bg-white/20 hover:border-amber-400/50 transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_20px_rgba(255,200,100,0.3)]">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-200 group-hover:text-amber-100 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-amber-100/80 font-mono text-xs tracking-widest group-hover:text-white transition-colors">UPLOAD MEMORIES</span>
+         <label className={`cursor-pointer group ${isProcessing ? 'pointer-events-none opacity-80' : ''}`}>
+           <input 
+             type="file" 
+             multiple 
+             accept="image/*" 
+             className="hidden" 
+             onChange={handleFileUpload} 
+             disabled={isProcessing}
+           />
+           <div className={`
+             flex items-center gap-3 px-6 py-3 backdrop-blur-xl border rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)]
+             ${isProcessing 
+                ? 'bg-amber-500/20 border-amber-400/50 cursor-wait' 
+                : 'bg-white/5 border-white/20 hover:bg-white/20 hover:border-amber-400/50 group-hover:shadow-[0_0_20px_rgba(255,200,100,0.3)]'
+             }
+           `}>
+              {isProcessing ? (
+                // Loading Spinner
+                <svg className="animate-spin h-5 w-5 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                // Upload Icon
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-200 group-hover:text-amber-100 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              )}
+              
+              <span className={`font-mono text-xs tracking-widest transition-colors ${isProcessing ? 'text-amber-400' : 'text-amber-100/80 group-hover:text-white'}`}>
+                {isProcessing ? "WRAPPING GIFTS..." : "UPLOAD MEMORIES"}
+              </span>
            </div>
          </label>
       </div>
