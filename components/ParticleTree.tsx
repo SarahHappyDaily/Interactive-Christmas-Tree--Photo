@@ -573,8 +573,8 @@ const SinglePolaroid = ({ data, progressRef, geometry, material, photoUrl }: any
     currentPos.current.lerp(dest, delta * 2);
     groupRef.current.position.copy(currentPos.current);
     
-    // Scale: Double size (2.0) when scattered
-    const targetScale = progress > 0.5 ? 2.0 : 1.0;
+    // Scale: Enlarge by 80% (1.8x) when scattered
+    const targetScale = progress > 0.5 ? 1.8 : 1.0;
     const currentScale = groupRef.current.scale.x;
     const newScale = THREE.MathUtils.lerp(currentScale, targetScale, delta * 3);
     groupRef.current.scale.setScalar(newScale);

@@ -59,6 +59,8 @@ const GestureController = () => {
 const App: React.FC = () => {
   const { addUserPhotos, isTracking } = useTreeStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Optimized helper to compress images using ObjectURL (Much faster on iOS than FileReader)
   const compressImage = (file: File): Promise<string> => {
@@ -117,6 +119,14 @@ const App: React.FC = () => {
     });
   };
 
+  const onConfirmUpload = () => {
+    setShowPrivacyModal(false);
+    // Trigger the hidden file input
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
@@ -147,17 +157,23 @@ const App: React.FC = () => {
   return (
     <div className="relative w-full h-screen bg-[#020205]">
       
+      {/* Hidden File Input */}
+      <input 
+        ref={fileInputRef}
+        type="file" 
+        multiple 
+        accept="image/*" 
+        className="hidden" 
+        onChange={handleFileUpload} 
+      />
+
       {/* Upload Button Area - Increased bottom padding for mobile safe area (bottom-12) */}
-      <div className="absolute bottom-12 right-8 z-50 flex flex-col items-end gap-2">
-         <label className={`cursor-pointer group ${isProcessing ? 'pointer-events-none opacity-80' : ''}`}>
-           <input 
-             type="file" 
-             multiple 
-             accept="image/*" 
-             className="hidden" 
-             onChange={handleFileUpload} 
-             disabled={isProcessing}
-           />
+      <div className="absolute bottom-12 right-8 z-50 flex flex-col items-end gap-1">
+         <button 
+           onClick={() => !isProcessing && setShowPrivacyModal(true)}
+           disabled={isProcessing}
+           className={`group outline-none focus:outline-none`}
+         >
            <div className={`
              flex items-center gap-3 px-6 py-3 backdrop-blur-xl border rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)]
              ${isProcessing 
@@ -179,10 +195,22 @@ const App: React.FC = () => {
               )}
               
               <span className={`font-mono text-xs tracking-widest transition-colors ${isProcessing ? 'text-amber-400' : 'text-amber-100/80 group-hover:text-white'}`}>
-                {isProcessing ? "WRAPPING GIFTS..." : "UPLOAD MEMORIES"}
+                {isProcessing ? "OPTIMIZING..." : "UPLOAD MEMORIES"}
               </span>
            </div>
-         </label>
+         </button>
+         
+         {/* Helper Text */}
+         <div className="flex flex-col items-end gap-1 pr-2">
+           {isProcessing && (
+             <span className="text-[10px] text-amber-300/80 font-mono animate-pulse">
+               Adding photos...
+             </span>
+           )}
+           <span className="text-[9px] text-white/20 font-mono tracking-wider transition-colors cursor-help">
+             🔒 PRIVATE • LOCAL ONLY
+           </span>
+         </div>
       </div>
 
       {/* 2. Vision Logic (Webcam) */}
@@ -246,6 +274,71 @@ const App: React.FC = () => {
       <div className="absolute bottom-6 w-full text-center text-amber-500/20 text-[10px] tracking-[0.5em] pointer-events-none font-mono">
         MERRY CHRISTMAS • 2024
       </div>
+
+      {/* --- Privacy & Confirmation Modal --- */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#1a1a20] border border-white/10 p-6 rounded-2xl max-w-sm w-full shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden">
+             
+             {/* Decorative shine */}
+             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
+
+             <h3 className="text-amber-100 font-serif text-xl mb-4 tracking-wide flex items-center gap-2">
+               <span className="text-2xl">🔒</span> 
+               100% Secure & Local
+             </h3>
+             
+             <div className="space-y-4">
+               {/* Security Points */}
+               <div className="bg-white/5 rounded-xl p-4 space-y-3 border border-white/10">
+                  <div className="flex gap-3 items-start">
+                     <span className="text-emerald-400 text-lg mt-0.5">🛡️</span>
+                     <div>
+                        <h4 className="text-white text-sm font-bold">Local Storage Only</h4>
+                        <p className="text-xs text-gray-400 leading-relaxed mt-1">
+                          Photos stay on your device. Nothing is uploaded or saved to any server.
+                        </p>
+                     </div>
+                  </div>
+                  
+                  <div className="flex gap-3 items-start">
+                     <span className="text-amber-400 text-lg mt-0.5">💥</span>
+                     <div>
+                        <h4 className="text-white text-sm font-bold">Session Only</h4>
+                        <p className="text-xs text-gray-400 leading-relaxed mt-1">
+                          Everything is <strong>deleted instantly</strong> when you close the app.
+                        </p>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Wait Warning */}
+               <div className="bg-amber-900/20 border border-amber-700/30 p-3 rounded-xl flex gap-3 items-center">
+                  <span className="text-amber-400 text-xl">⏳</span>
+                  <p className="text-amber-200/90 text-xs font-medium leading-relaxed">
+                     When you finish selection, it will take around <strong>5 seconds</strong> to process.<br/>
+                     Please do not exit.
+                  </p>
+               </div>
+             </div>
+
+             <div className="flex gap-3 mt-6">
+               <button 
+                 onClick={() => setShowPrivacyModal(false)}
+                 className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors text-xs font-mono"
+               >
+                 CANCEL
+               </button>
+               <button 
+                 onClick={onConfirmUpload}
+                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-600 border border-amber-500/50 text-white hover:brightness-110 transition-all text-xs font-mono tracking-wider font-bold shadow-lg shadow-amber-900/20"
+               >
+                 SELECT PHOTOS
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
