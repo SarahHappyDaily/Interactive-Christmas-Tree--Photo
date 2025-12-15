@@ -115,8 +115,8 @@ const App: React.FC = () => {
   return (
     <div className="relative w-full h-screen bg-[#020205]">
       
-      {/* Upload Button Area */}
-      <div className="absolute bottom-8 right-8 z-50 flex flex-col items-end gap-2">
+      {/* Upload Button Area - Increased bottom padding for mobile safe area (bottom-12) */}
+      <div className="absolute bottom-12 right-8 z-50 flex flex-col items-end gap-2">
          <label className="cursor-pointer group">
            <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileUpload} />
            <div className="flex items-center gap-3 px-6 py-3 bg-white/5 backdrop-blur-xl border border-white/20 rounded-full hover:bg-white/20 hover:border-amber-400/50 transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_20px_rgba(255,200,100,0.3)]">

@@ -52,8 +52,13 @@ const VisionManager: React.FC = () => {
 
   const startWebcam = async () => {
     try {
+      // Updated to prefer front-facing camera ('user') for mobile devices
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 640, height: 480 } 
+        video: { 
+          width: { ideal: 640 }, 
+          height: { ideal: 480 },
+          facingMode: "user" 
+        } 
       });
       
       if (videoRef.current) {
@@ -205,6 +210,7 @@ const VisionManager: React.FC = () => {
           ref={videoRef} 
           autoPlay 
           playsInline
+          muted
           className="absolute inset-0 w-full h-full object-cover opacity-60"
           style={{ transform: 'scaleX(-1)' }} 
         />
